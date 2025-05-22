@@ -1,7 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
 from flask import jsonify, make_response, request
-import json, requests
 import numpy as np
 import os
 import tensorflow as tf
@@ -10,6 +9,9 @@ import os
 from tensorflow import keras
 from dotenv import load_dotenv
 import pandas as pd
+import json
+
+# from DetoxifySys.service import filter_comment
 
 # import psycopg2
 from sqlalchemy import create_engine
@@ -167,6 +169,22 @@ def train_recommendation_models():
         return "", 200
     except Exception as e:
         return make_response(jsonify({"error": f"Training failed because {e}"}), 500)
+
+
+@app.route("/censor-comment", methods=["POST"])
+def filter_comment_api():
+    try:
+        data = request.get_json()
+        text = data.get("comment")
+        if not text or not isinstance(text, str):
+            return make_response(jsonify({"error": "comment must be a string"}), 400)
+        retrieval_args = ["python", "./DetoxifySys/service.py", f"-t {text}"]
+        subprocess.run(retrieval_args)
+        with open("DetoxifySys/assets/result.json") as f:
+            result = json.load(f)
+        return make_response(jsonify(result), 200)
+    except Exception as e:
+        return make_response(jsonify({"error": f"Filtering failed because {e}"}), 500)
 
 
 if __name__ == "__main__":
